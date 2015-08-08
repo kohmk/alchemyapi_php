@@ -39,6 +39,14 @@ class AlchemyAPI {
 	*/ 
 	public function AlchemyAPI() {
 		//Load the API Key from api_key.txt
+		//$key = trim(file_get_contents("api_key.txt"));
+	 
+		// vcap_services Extraction 
+                $services_json = json_decode(getenv('VCAP_SERVICES'),true);
+                $credential = $services_json["user-provided"][0]["credentials"];
+		
+		// Extract the VCAP_SERVICES variables
+		$key = $credential['apikey'];
 		$key = trim(file_get_contents("api_key.txt"));
 	
 		if (!$key) {
@@ -104,6 +112,8 @@ class AlchemyAPI {
 		$this->_ENDPOINTS['taxonomy']['url'] = '/url/URLGetRankedTaxonomy';
 		$this->_ENDPOINTS['taxonomy']['html'] = '/html/HTMLGetRankedTaxonomy';
 		$this->_ENDPOINTS['taxonomy']['text'] = '/text/TextGetRankedTaxonomy';
+		$this->_ENDPOINTS['face_detection']['url'] = '/url/URLGetRankedImageFaceTags';
+		$this->_ENDPOINTS['face_detection']['image'] = '/image/ImageGetRankedImageFaceTags';
 	}
 
 
@@ -180,7 +190,23 @@ class AlchemyAPI {
 		return $this->analyze($this->_ENDPOINTS['entities'][$flavor], $options);
 	}
 
-
+	public function face_detection($flavor, $image, $options) {
+		//Make sure this request supports the flavor
+		if (!array_key_exists($flavor, $this->_ENDPOINTS['face_detection'])) {
+			return array('status'=>'ERROR',
+		'statusInfo'=>'Face detection for ' . $flavor . ' not available');
+		}
+ 
+		//Add the image to the options and analyze
+		if($flavor=='url'){
+			$options[$flavor] = $image;
+			return $this->analyze($this->_ENDPOINTS['face_detection'][$flavor], $options);
+		}
+		else{
+			return $this->analyzeImage($this->_ENDPOINTS['face_detection'][$flavor],
+                            $options, $image);	
+		}
+	}
 	/**
 	  *	Extracts the keywords from text, a URL or HTML.
 	  *	For an overview, please refer to: http://www.alchemyapi.com/products/features/keyword-extraction/
